@@ -57,12 +57,12 @@ GtkWidget* saveprofile_button = NULL;
 GtkWidget* cancelprofile_button = NULL;
 GtkWidget* refresh_controls_button = NULL;
 
-struct monitor* mon;
+struct Monitor* mon;
 
 int current_monitor; /* current monitor */
 int num_monitor; /* total number of monitors */
 
-struct monitorlist* monlist;
+struct MonitorList* monlist;
 
 GtkTooltips *tooltips;
 
@@ -127,7 +127,7 @@ static void combo_change(GtkWidget *widget, gpointer data)
 	
 		char buffer[256];
 		
-		struct monitorlist* current;
+		struct MonitorList* current;
 		
 		for (current = monlist;; current = current->next)
 		{
@@ -170,7 +170,7 @@ static gboolean window_changed(GtkWidget *widget,
 {
 	if (num_monitor == 2) { // If there are more than two monitors, we need a configuration menu
 		int cx, cy, i;
-		struct monitorlist* current;
+		struct MonitorList* current;
 		
 		if (monlist == NULL) {
 			if (get_verbosity())
@@ -350,7 +350,7 @@ static void probe_monitors(GtkWidget *widget, gpointer data) {
 	// TODO: rescan on button, initial get only
 	monlist = ddcci_dbus_rescan_monitors(ddccontrol_proxy);
 
-	struct monitorlist* current;
+	struct MonitorList* current;
 	
 	char buffer[256];
 	

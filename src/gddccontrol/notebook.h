@@ -43,7 +43,7 @@
 #endif
 
 /* globals */
-extern struct monitor* mon;
+extern struct Monitor* mon;
 
 extern GtkWidget* main_app_window;
 
@@ -52,7 +52,7 @@ extern GtkWidget* profile_manager;
 
 /* notebook.c */
 
-void create_monitor_manager(struct monitorlist* monitor);
+void create_monitor_manager(struct MonitorList* monitor);
 void delete_monitor_manager();
 
 void show_profile_checks(gboolean show);
@@ -60,7 +60,7 @@ int get_profile_checked_controls(unsigned char* controls);
 
 void refresh_all_controls(GtkWidget *widget, gpointer nval);
 
-short get_control_max(struct control_db *control);
+short get_control_max(struct ControlDB *control);
 
 /* gprofile.c */
 void create_profile_manager();
@@ -68,7 +68,7 @@ void create_profile_manager();
 void saveprofile_callback(GtkWidget *widget, gpointer data);
 void cancelprofile_callback(GtkWidget *widget, gpointer data);
 
-void show_profile_information(struct profile* profile, gboolean new_profile);
+void show_profile_information(struct Profile* profile, gboolean new_profile);
 
 /* fspatterns.c */
 

@@ -102,15 +102,15 @@ int get_verbosity() {
 	return verbosity;
 }
 
-static void open_card(struct i2c_bus* bus) {
+static void open_card(struct I2cBus* bus) {
 	if (verbosity == 2) {
 		printf("==>Opening...\n");
 		printf("==>%02x:%02x.%d-%d\n",
 			bus->bus, bus->dev, bus->func, bus->i2cbus);
 	}
 	
-	struct answer aopen;
-	memset(&aopen, 0, sizeof(struct answer));
+	struct Answer aopen;
+	memset(&aopen, 0, sizeof(struct Answer));
 	aopen.mtype = 2;
 	aopen.status = -1;
 	
@@ -161,13 +161,13 @@ static void open_card(struct i2c_bus* bus) {
 	}
 }
 
-static void data(struct query* mquery, int len) {
+static void data(struct Query* mquery, int len) {
 	if (verbosity == 2) {
 		printf("==>Data, mquery->flags = %d\n", mquery->flags);
 	}
 	if (mquery->flags & I2C_M_RD) {
-		struct answer adata;
-		memset(&adata, 0, sizeof(struct answer));
+		struct Answer adata;
+		memset(&adata, 0, sizeof(struct Answer));
 		adata.mtype = 2;
 		
 		int ret;
@@ -200,8 +200,8 @@ static void data(struct query* mquery, int len) {
 		i2cmsg[0].buf   = mquery->buffer;
 		ret = bit_xfer(current_algo, i2cmsg, 1);
 		
-		struct answer adata;
-		memset(&adata, 0, sizeof(struct answer));
+		struct Answer adata;
+		memset(&adata, 0, sizeof(struct Answer));
 		adata.mtype = 2;
 		adata.status = (ret < 0) ? -1 : ret;
 		if (msgsnd(msqid, &adata, ANSWER_SIZE, IPC_NOWAIT) < 0) {
@@ -240,8 +240,8 @@ static void list()
 						printf("==>Supported\n");
 					}
 					for (j = 0; j < thecard->nbusses; j++) {
-						struct answer alist;
-						memset(&alist, 0, sizeof(struct answer));
+						struct Answer alist;
+						memset(&alist, 0, sizeof(struct Answer));
 						alist.mtype = 2;
 						alist.status = 0;
 						alist.last = 0;
@@ -263,8 +263,8 @@ static void list()
 		}
 	}
 	
-	struct answer alist;
-	memset(&alist, 0, sizeof(struct answer));
+	struct Answer alist;
+	memset(&alist, 0, sizeof(struct Answer));
 	alist.mtype = 2;
 	alist.status = 0;
 	alist.last = 1;
@@ -282,7 +282,7 @@ int main(int argc, char **argv)
 	pci_init(pacc);
 	pci_scan_bus(pacc);
 	
-	struct query mquery;
+	struct Query mquery;
 	
 	char* endptr;
 	
@@ -316,7 +316,7 @@ int main(int argc, char **argv)
 	time_t last = time(NULL);
 	
 	while (cont) {
-		if ((len = msgrcv(msqid, &mquery, sizeof(struct query) - sizeof(long), 1, IPC_NOWAIT)) < 0) {
+		if ((len = msgrcv(msqid, &mquery, sizeof(struct Query) - sizeof(long), 1, IPC_NOWAIT)) < 0) {
 			if (errno == ENOMSG) {
 				if ((time(NULL) - last) > (IDLE_TIMEOUT*1.1)) {
 					fprintf(stderr, _("==>No command received for %ld seconds, aborting.\n"), (time(NULL) - last));

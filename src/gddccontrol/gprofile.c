@@ -41,7 +41,7 @@ void saveprofile_callback(GtkWidget *widget, gpointer data)
 {
 	unsigned char controls[256];
 	int size;
-	struct profile* profile;
+	struct Profile* profile;
 	
 	size = get_profile_checked_controls(&controls[0]);
 	
@@ -89,7 +89,7 @@ void saveprofile_callback(GtkWidget *widget, gpointer data)
 /* Callbacks */
 static void apply_callback(GtkWidget *widget, gpointer data)
 {
-	struct profile* profile = (struct profile*)data;
+	struct Profile* profile = (struct Profile*)data;
 	
 	set_message(_("Applying profile..."));
 	
@@ -102,14 +102,14 @@ static void apply_callback(GtkWidget *widget, gpointer data)
 
 static void show_info_callback(GtkWidget *widget, gpointer data)
 {
-	struct profile* profile = (struct profile*)data;
+	struct Profile* profile = (struct Profile*)data;
 	
 	show_profile_information(profile, FALSE);
 }
 
 static void delete_callback(GtkWidget *widget, gpointer data)
 {
-	struct profile* profile = (struct profile*)data;
+	struct Profile* profile = (struct Profile*)data;
 	
 	GtkWidget* dialog = gtk_message_dialog_new(
 		GTK_WINDOW(main_app_window), GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -157,7 +157,7 @@ void fill_profile_manager() {
 	GtkWidget* hsep;
 	GtkWidget* hbox;
 	GtkWidget* scrolled_window;
-	struct profile* profile;
+	struct Profile* profile;
 	int count = 0;
 	int crow = 0;
 	gchar* tmp;
@@ -281,7 +281,7 @@ enum
 	N_COLS,
 };
 
-static GtkWidget* create_info_tree(struct profile* profile, GtkWidget* dialog)
+static GtkWidget* create_info_tree(struct Profile* profile, GtkWidget* dialog)
 {
 	gchar* tmp;
 	gchar* tmp2;
@@ -321,10 +321,10 @@ static GtkWidget* create_info_tree(struct profile* profile, GtkWidget* dialog)
 	GtkTreeIter sub_iter;
 	GtkTreeIter con_iter;
 	
-	struct group_db* group;
-	struct subgroup_db* subgroup;
-	struct control_db* control;
-	struct value_db* value_db;
+	struct GroupDB* group;
+	struct SubgroupDB* subgroup;
+	struct ControlDB* control;
+	struct ValueDB* value_db;
 	
 	gboolean group_created, subgroup_created;
 	
@@ -357,7 +357,7 @@ static GtkWidget* create_info_tree(struct profile* profile, GtkWidget* dialog)
 						tmp2 = g_strdup_printf("%u", profile->value[i]);
 						
 						switch (control->type) {
-						case value:
+						case CTRL_TYPE_VALUE:
 							/* Try to get the control maximum */
 							max = get_control_max(control);
 							if (max) {
@@ -367,7 +367,7 @@ static GtkWidget* create_info_tree(struct profile* profile, GtkWidget* dialog)
 								tmp3 = g_strdup("??%");
 							}
 							break;
-						case list:
+						case CTRL_TYPE_LIST:
 							tmp3 = NULL;
 							for (value_db = control->value_list; value_db != NULL; value_db = value_db->next)
 							{
@@ -426,7 +426,7 @@ static void entry_modified_callback(GtkWidget* entry, GtkWidget* dialog) {
 /* Creates a profile information dialog and show it.
  *  new_profile - indicates if the profile has just been created.
  */
-void show_profile_information(struct profile* profile, gboolean new_profile) {
+void show_profile_information(struct Profile* profile, gboolean new_profile) {
 	GtkWidget *label;
 	GtkWidget *entry;
 	GtkWidget *hbox;

@@ -31,7 +31,7 @@
 /* If ddcpci receives no connections during IDLE_TIMEOUT seconds, it will break the connection and exit. */
 #define IDLE_TIMEOUT 60
 
-struct i2c_bus {
+struct I2cBus {
 	int bus;
 	int dev;
 	int func;
@@ -39,8 +39,8 @@ struct i2c_bus {
 };
 
 #define MAX_BUFFER_SIZE 256
-#define QUERY_SIZE  (sizeof(struct query) - (MAX_BUFFER_SIZE) - sizeof(long))
-#define ANSWER_SIZE (sizeof(struct answer) - (MAX_BUFFER_SIZE) - sizeof(long))
+#define QUERY_SIZE  (sizeof(struct Query) - (MAX_BUFFER_SIZE) - sizeof(long))
+#define ANSWER_SIZE (sizeof(struct Answer) - (MAX_BUFFER_SIZE) - sizeof(long))
 
 /* ddccontrol to ddcpci messages (queries) */
 #define QUERY_LIST 0       /* Nothing should be defined */
@@ -49,11 +49,11 @@ struct i2c_bus {
 #define QUERY_HEARTBEAT 3  /* Nothing should be defined */
 #define QUERY_QUIT 4       /* Nothing should be defined */
 
-struct query {
+struct Query {
 	long mtype; /* Always 1 */
 	int qtype; /* see above for possible values */
 	/* QUERY_OPEN */
-	struct i2c_bus bus;
+	struct I2cBus bus;
 	/* QUERY_DATA */
 	int addr;
 	int flags;
@@ -62,12 +62,12 @@ struct query {
 };
 
 /* ddcpci to ddccontrol messages (answers) */
-struct answer {
+struct Answer {
 	long mtype; /* Always 2 */
 	int status; /* 0 or greater - OK (bytes read/written for answers to QUERY_DATA), -1 - an error occurred */
 	
 	int last; /* 0 - Last message, no bus to read, 1 - Other messages follows (for QUERY_LIST) */
-	struct i2c_bus bus; /* For answers to QUERY_LIST */
+	struct I2cBus bus; /* For answers to QUERY_LIST */
 	unsigned char buffer[MAX_BUFFER_SIZE]; /* For answers to QUERY_DATA, read operations */
 };
 

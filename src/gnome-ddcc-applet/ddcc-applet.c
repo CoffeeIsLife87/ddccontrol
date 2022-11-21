@@ -226,7 +226,7 @@ static gboolean
 change_profile_cb (GtkMenuItem*	item,
 		  DdccApplet*	applet)
 {
-	struct profile* profile = NULL;
+	struct Profile* profile = NULL;
 	
 	profile = g_object_get_data (G_OBJECT (item), "ddcc_profile");
 	ddcci_apply_profile (profile, applet->monitor);
@@ -303,7 +303,7 @@ destroy_cb (GtkObject* object, DdccApplet* applet)
 static int
 fill_profiles_menu (DdccApplet *applet)
 {
-	struct profile* profile;
+	struct Profile* profile;
 	GtkWidget* item;
 			
 	if (!ddcci_get_all_profiles (applet->monitor))
@@ -326,8 +326,8 @@ fill_profiles_menu (DdccApplet *applet)
 static int
 fill_monitor_combo (DdccApplet *applet)
 {
-	struct monitorlist* monlist;
-	struct monitorlist* current;
+	struct MonitorList* monlist;
+	struct MonitorList* current;
 	char buffer[256];
 	
 	if (!(monlist = ddcci_load_list ()))
@@ -480,7 +480,7 @@ ddcc_applet_main (PanelApplet* root_applet)
 	
 	applet = g_malloc0 (sizeof (DdccApplet));
 	applet->error = ERR_NO_INIT;
-	applet->monitor = g_malloc (sizeof (struct monitor));
+	applet->monitor = g_malloc (sizeof (struct Monitor));
 	applet->w_applet = root_applet;
 	
 	/* create the label */

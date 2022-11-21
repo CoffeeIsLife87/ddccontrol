@@ -62,14 +62,14 @@ extern DDCControl *ddccontrol_proxy;
 // Helpers
 ////////////////////
 
-static void write_dbctrl(struct control_db *control, unsigned short nval) {
+static void write_dbctrl(struct ControlDB *control, unsigned short nval) {
 	ddcci_writectrl(mon, control->address, nval, control->delay);
 }
 	
-static void get_value_and_max(struct control_db *control, unsigned short *currentValue, unsigned short *currentMaximum)
+static void get_value_and_max(struct ControlDB *control, unsigned short *currentValue, unsigned short *currentMaximum)
 {
 	int result;
-	if (control->type != command)
+	if (control->type != CTRL_TYPE_COMMAND)
 	{
 		result = ddcci_readctrl(mon, control->address, currentValue, currentMaximum);
 	}
@@ -86,11 +86,11 @@ static void get_value_and_max(struct control_db *control, unsigned short *curren
 	}
 }
 
-short get_control_max(struct control_db *control) {
+short get_control_max(struct ControlDB *control) {
 	GSList* list = all_controls;
 	
 	while (list) {
-		struct control_db *control_db = (struct control_db*)g_object_get_data(G_OBJECT(list->data), "ddc_control");
+		struct ControlDB *control_db = (struct ControlDB*)g_object_get_data(G_OBJECT(list->data), "ddc_control");
 		if (control == control_db) {
 			return (short)(long)g_object_get_data(G_OBJECT(list->data), "ddc_max");
 		}
@@ -121,9 +121,9 @@ void refresh_all_controls(GtkWidget *widget, gpointer data)
 	
 	refreshing = 1; /* Tell callbacks not to write values back to the monitor. */
 	while (list) {
-		struct control_db *control = (struct control_db*)g_object_get_data(G_OBJECT(list->data), "ddc_control");
+		struct ControlDB *control = (struct ControlDB*)g_object_get_data(G_OBJECT(list->data), "ddc_control");
 		if (control) {
-			if (control->type != command) {
+			if (control->type != CTRL_TYPE_COMMAND) {
 				get_value_and_max(control, &currentValue, &currentMaximum);
 				change_control_value(list->data, (gpointer)(long)currentValue);
 			}
@@ -146,15 +146,15 @@ void refresh_all_controls(GtkWidget *widget, gpointer data)
 
 static void change_control_value(GtkWidget *widget, gpointer nval)
 {
-	struct control_db *control = (struct control_db*)g_object_get_data(G_OBJECT(widget),"ddc_control");
+	struct ControlDB *control = (struct ControlDB*)g_object_get_data(G_OBJECT(widget),"ddc_control");
 	
 	/* No control found on the widget, we are probably on an item of a group (list) */
 	if (control == NULL) {
 		GtkWidget *parent = gtk_widget_get_parent(widget);
-		control = (struct control_db*)g_object_get_data(G_OBJECT(parent),"ddc_control");
+		control = (struct ControlDB*)g_object_get_data(G_OBJECT(parent),"ddc_control");
 		
-		if ((control) && (control->type == list)) {
-			struct value_db *value = (struct value_db*)g_object_get_data(G_OBJECT(widget), "ddc_value");
+		if ((control) && (control->type == CTRL_TYPE_LIST)) {
+			struct ValueDB *value = (struct ValueDB*)g_object_get_data(G_OBJECT(widget), "ddc_value");
 			unsigned short val = value->value;
 			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), (long)nval == val);
 		}
@@ -163,16 +163,16 @@ static void change_control_value(GtkWidget *widget, gpointer nval)
 	
 	switch(control->type)
 	{
-		case value:
+		case CTRL_TYPE_VALUE:
 		{
 			unsigned long Maximum = (unsigned long) g_object_get_data(G_OBJECT(widget),"ddc_max");
 			gtk_range_set_increments(GTK_RANGE(widget), 100.0/(double)Maximum, 10.0*100.0/(double)Maximum);
 			gtk_range_set_value(GTK_RANGE(widget), 100.0*(double)(long)nval/(double)Maximum);
 			break;
 		}
-		case command:
+		case CTRL_TYPE_COMMAND:
 			break;
-		case list:
+		case CTRL_TYPE_LIST:
 			gtk_container_foreach(GTK_CONTAINER(widget), change_control_value, nval);
 			break;
 	}
@@ -180,7 +180,7 @@ static void change_control_value(GtkWidget *widget, gpointer nval)
 
 static void range_callback(GtkWidget *widget, gpointer data)
 {
-	struct control_db *control = (struct control_db*)g_object_get_data(G_OBJECT(widget),"ddc_control");
+	struct ControlDB *control = (struct ControlDB*)g_object_get_data(G_OBJECT(widget),"ddc_control");
 	if (!control) {
 		return;
 	}
@@ -213,13 +213,13 @@ static void range_callback(GtkWidget *widget, gpointer data)
 	
 static void group_callback(GtkWidget *widget, gpointer data)
 {
-	struct value_db *value = (struct value_db*)g_object_get_data(G_OBJECT(widget), "ddc_value");
+	struct ValueDB *value = (struct ValueDB*)g_object_get_data(G_OBJECT(widget), "ddc_value");
 	g_return_if_fail(value);
 	
 	GtkWidget *parent = gtk_widget_get_parent(widget);
 	g_return_if_fail(parent);
 	
-	struct control_db *control = (struct control_db*)g_object_get_data(G_OBJECT(parent),"ddc_control");
+	struct ControlDB *control = (struct ControlDB*)g_object_get_data(G_OBJECT(parent),"ddc_control");
 	if (!control) {
 		return;
 	}
@@ -244,7 +244,7 @@ static void group_callback(GtkWidget *widget, gpointer data)
 			modified = 1;
 			
 			/* Refresh if needed */
-			if (control->refresh == all) {
+			if (control->refresh == REFRESH_TYPE_ALL) {
 				refresh_all_controls(NULL, NULL);
 			}
 		}
@@ -253,8 +253,8 @@ static void group_callback(GtkWidget *widget, gpointer data)
 	
 static void command_callback(GtkWidget *widget, gpointer data)
 {
-	struct value_db *value = (struct value_db*) data;
-	struct control_db *control = (struct control_db*)g_object_get_data(G_OBJECT(widget),"ddc_control");
+	struct ValueDB *value = (struct ValueDB*) data;
+	struct ControlDB *control = (struct ControlDB*)g_object_get_data(G_OBJECT(widget),"ddc_control");
 	
 	unsigned short val;
 	
@@ -271,7 +271,7 @@ static void command_callback(GtkWidget *widget, gpointer data)
 		modified = 1;
 		
 		/* Refresh if needed */
-		if (control->refresh == all) {
+		if (control->refresh == REFRESH_TYPE_ALL) {
 			refresh_all_controls(NULL, NULL);
 		}
 	}
@@ -283,7 +283,7 @@ static void restore_callback(GtkWidget *widget, gpointer data)
 	GtkWidget* cwidget = (GtkWidget*)data;
 	
 	unsigned long Default = (unsigned long) g_object_get_data(G_OBJECT(cwidget),"ddc_default");
-	struct control_db *control = (struct control_db*)g_object_get_data(G_OBJECT(cwidget),"ddc_control");
+	struct ControlDB *control = (struct ControlDB*)g_object_get_data(G_OBJECT(cwidget),"ddc_control");
 	
 	if (control) {
 		write_dbctrl(control, Default);
@@ -336,13 +336,13 @@ int get_profile_checked_controls(unsigned char* controls) {
 	int current = 0;
 	
 	GSList* list = all_controls;
-	struct control_db *control;
+	struct ControlDB *control;
 	
 	while (list) {
 		GtkWidget* check = (GtkWidget*)g_object_get_data(G_OBJECT(list->data), "check");
 		if (check) {
 			if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(check))) {
-				control = (struct control_db*)g_object_get_data(G_OBJECT(list->data), "ddc_control");
+				control = (struct ControlDB*)g_object_get_data(G_OBJECT(list->data), "ddc_control");
 				controls[current] = control->address;
 				current++;
 			}
@@ -353,11 +353,11 @@ int get_profile_checked_controls(unsigned char* controls) {
 	return current;
 }
 
-static void createControl(GtkWidget *parent,struct control_db *control)
+static void createControl(GtkWidget *parent,struct ControlDB *control)
 {
 	unsigned short currentDefault = 1;
 	unsigned short currentMaximum = 1;
-	if (control->type != command)
+	if (control->type != CTRL_TYPE_COMMAND)
 		get_value_and_max(control,&currentDefault,&currentMaximum);
 	
 	GtkWidget* hbox = gtk_hbox_new(FALSE,0);
@@ -368,8 +368,8 @@ static void createControl(GtkWidget *parent,struct control_db *control)
 	
 	switch (control->type)
 	{
-		case value:
-		case list:
+		case CTRL_TYPE_VALUE:
+		case CTRL_TYPE_LIST:
 			button = gtk_button_new();
 			GtkWidget *image = gtk_image_new_from_stock(GTK_STOCK_UNDO, GTK_ICON_SIZE_LARGE_TOOLBAR);
 			gtk_widget_show(image);
@@ -391,7 +391,7 @@ static void createControl(GtkWidget *parent,struct control_db *control)
 	
 	switch (control->type)
 	{
-		case value:
+		case CTRL_TYPE_VALUE:
 			{
 				widget = gtk_hscale_new_with_range(0.0, 100.0, 1.0);
 				gtk_scale_set_digits(GTK_SCALE(widget), 1);
@@ -410,10 +410,10 @@ static void createControl(GtkWidget *parent,struct control_db *control)
 				g_signal_connect_after(G_OBJECT(widget), "change-value", G_CALLBACK(range_callback), NULL);
 			}
 			break;
-		case command:
+		case CTRL_TYPE_COMMAND:
 			{
 				widget = gtk_vbox_new(TRUE, 0);
-				struct value_db* value;
+				struct ValueDB* value;
 				for (value = control->value_list; value != NULL; value = value->next)
 				{
 					GtkWidget* button = gtk_button_new_with_label((char*)value->name);
@@ -424,10 +424,10 @@ static void createControl(GtkWidget *parent,struct control_db *control)
 				}
 			}
 			break;
-		case list:
+		case CTRL_TYPE_LIST:
 			{
 				widget = gtk_vbox_new(TRUE, 0);
-				struct value_db* value;
+				struct ValueDB* value;
 				GSList* group = NULL;
 				for (value = control->value_list; value != NULL; value = value->next)
 				{
@@ -471,14 +471,14 @@ static void createControl(GtkWidget *parent,struct control_db *control)
 	gtk_container_add(GTK_CONTAINER(parent),hbox);
 }
 	
-static void createPage(GtkWidget* notebook, struct subgroup_db* subgroup)
+static void createPage(GtkWidget* notebook, struct SubgroupDB* subgroup)
 {
 	int i=0;
 	GtkWidget* mainvbox = gtk_vbox_new(FALSE,10);
 	GtkWidget* vbox = gtk_vbox_new(FALSE,10);
 	GtkWidget* frame;
 	
-	struct control_db* control;
+	struct ControlDB* control;
 	for (control = subgroup->control_list; control != NULL; control = control->next)
 	{
 		frame = gtk_frame_new((char*)control->name);
@@ -500,7 +500,7 @@ static void createPage(GtkWidget* notebook, struct subgroup_db* subgroup)
 		g_object_set_data(G_OBJECT(button), "pattern", subgroup->pattern);
 		g_object_set_data(G_OBJECT(button), "mainvbox", mainvbox);
 		g_object_set_data(G_OBJECT(button), "vbox", vbox);
-		g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(fullscreen_callback), value);
+		g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(fullscreen_callback), CTRL_TYPE_VALUE);
 	}
 	
 	gtk_box_pack_start(GTK_BOX(mainvbox), vbox, 0, 5, 5);
@@ -530,8 +530,8 @@ static GtkWidget* createTree(GtkWidget *notebook)
 	GtkTreeIter top_iter;
 	GtkTreeIter sub_iter;
 	
-	struct group_db* group;
-	struct subgroup_db* subgroup;
+	struct GroupDB* group;
+	struct SubgroupDB* subgroup;
 	
 	if (mon->db)
 	{
@@ -564,7 +564,7 @@ static GtkWidget* createTree(GtkWidget *notebook)
 	return tree;
 }
 
-void create_monitor_manager(struct monitorlist* monitor)
+void create_monitor_manager(struct MonitorList* monitor)
 {
 	modified = 0;
 	all_controls = NULL;
@@ -609,8 +609,8 @@ void create_monitor_manager(struct monitorlist* monitor)
 	
 	GtkWidget *notebook = gtk_notebook_new();
 	
-	struct group_db* group;
-	struct subgroup_db* subgroup;
+	struct GroupDB* group;
+	struct SubgroupDB* subgroup;
 	
 	GtkWidget *tree = createTree(notebook);
 	

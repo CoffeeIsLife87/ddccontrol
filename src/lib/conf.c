@@ -65,7 +65,7 @@ static char* get_monitorlist_filename() {
 }
 
 /* Load a saved monitorlist */
-struct monitorlist* ddcci_load_list() {
+struct MonitorList* ddcci_load_list() {
 	xmlNodePtr cur, root;
 	xmlDocPtr list_doc;
 	
@@ -73,9 +73,9 @@ struct monitorlist* ddcci_load_list() {
 	xmlChar *tmp;
 	char *endptr;
 	
-	struct monitorlist* list = NULL;
-	struct monitorlist* current = NULL;
-	struct monitorlist** last = &list;
+	struct MonitorList* list = NULL;
+	struct MonitorList* current = NULL;
+	struct MonitorList** last = &list;
 	
 	filename = get_monitorlist_filename();
 	if (!filename)
@@ -119,7 +119,7 @@ struct monitorlist* ddcci_load_list() {
 			break;
 		}
 		if (!(xmlStrcmp(cur->name, BAD_CAST "monitor"))) {
-			current = malloc(sizeof(struct monitorlist));
+			current = malloc(sizeof(struct MonitorList));
 			
 			tmp = xmlGetProp(cur, BAD_CAST "filename");
 			DDCCI_DB_RETURN_IF_RUN(tmp == NULL, 0, _("Can't find filename property."), cur,
@@ -162,9 +162,9 @@ struct monitorlist* ddcci_load_list() {
 }
 
 /* Save the monitorlist */
-int ddcci_save_list(struct monitorlist* monlist) {
+int ddcci_save_list(struct MonitorList* monlist) {
 	char* filename;
-	struct monitorlist* current;
+	struct MonitorList* current;
 	int rc;
 	xmlTextWriterPtr writer;
 	
@@ -219,12 +219,12 @@ int ddcci_save_list(struct monitorlist* monlist) {
 
 /* Profile functions */
 
-struct profile* ddcci_create_profile(struct monitor* mon, const unsigned char* address, int size)
+struct Profile* ddcci_create_profile(struct Monitor* mon, const unsigned char* address, int size)
 {
 	int retry, i;
 	
-	struct profile* profile = malloc(sizeof(struct profile));
-	memset(profile, 0, sizeof(struct profile));
+	struct Profile* profile = malloc(sizeof(struct Profile));
+	memset(profile, 0, sizeof(struct Profile));
 	
 	profile->size = size;
 	
@@ -263,7 +263,7 @@ struct profile* ddcci_create_profile(struct monitor* mon, const unsigned char* a
 	return profile;
 }
 
-int ddcci_apply_profile(struct profile* profile, struct monitor* mon) {
+int ddcci_apply_profile(struct Profile* profile, struct Monitor* mon) {
 	int retry, i;
 	
 	for (i = 0; i < profile->size; i++) {
@@ -280,13 +280,13 @@ int ddcci_apply_profile(struct profile* profile, struct monitor* mon) {
 	return 1;
 }
 
-void ddcci_set_profile_name(struct profile* profile, const char* name) {
+void ddcci_set_profile_name(struct Profile* profile, const char* name) {
 	/* FIXME: What happens if the profile name contains chars like '"<>'? */
 	profile->name = xmlCharStrdup(name);
 }
 
 /* Get all profiles available for a given monitor */
-int ddcci_get_all_profiles(struct monitor* mon) {
+int ddcci_get_all_profiles(struct Monitor* mon) {
 	int len, ret, pos;
 	char* home;
 	char* dirname;
@@ -296,8 +296,8 @@ int ddcci_get_all_profiles(struct monitor* mon) {
 	struct dirent* entry;
 	struct stat buf;
 	
-	struct profile** next = &mon->profiles;
-	struct profile* profile;
+	struct Profile** next = &mon->profiles;
+	struct Profile* profile;
 	
 	home     = getenv("HOME");
 	trailing = (home[strlen(home)-1] == '/');
@@ -350,7 +350,7 @@ int ddcci_get_all_profiles(struct monitor* mon) {
 	return 1;
 }
 
-struct profile* ddcci_load_profile(const char* filename) {
+struct Profile* ddcci_load_profile(const char* filename) {
 	xmlNodePtr cur, root;
 	xmlDocPtr profile_doc;
 	
@@ -358,8 +358,8 @@ struct profile* ddcci_load_profile(const char* filename) {
 	char *endptr;
 	int itmp;
 	
-	struct profile* profile = malloc(sizeof(struct profile));
-	memset(profile, 0, sizeof(struct profile));
+	struct Profile* profile = malloc(sizeof(struct Profile));
+	memset(profile, 0, sizeof(struct Profile));
 	
 	profile_doc = xmlParseFile(filename);
 	if (profile_doc == NULL) {
@@ -435,7 +435,7 @@ struct profile* ddcci_load_profile(const char* filename) {
 }
 
 /* Save profile and add it to the profiles list of the given monitor if necessary */
-int ddcci_save_profile(struct profile* profile, struct monitor* monitor) {
+int ddcci_save_profile(struct Profile* profile, struct Monitor* monitor) {
 	int rc;
 	xmlTextWriterPtr writer;
 	int i;
@@ -485,7 +485,7 @@ int ddcci_save_profile(struct profile* profile, struct monitor* monitor) {
 	xmlFreeTextWriter(writer);
 	
 	/* Update database */
-	struct profile** profileptr = &monitor->profiles;
+	struct Profile** profileptr = &monitor->profiles;
 	
 	while (*profileptr) {
 		if (*profileptr == profile) /* We are already in the database... */
@@ -499,7 +499,7 @@ int ddcci_save_profile(struct profile* profile, struct monitor* monitor) {
 }
 
 /* Deletes the profile file, and remove it from the monitor database. */
-void ddcci_delete_profile(struct profile* profile, struct monitor* monitor) {
+void ddcci_delete_profile(struct Profile* profile, struct Monitor* monitor) {
 	/* Delete the file */
 	
 	if (unlink(profile->filename) < 0) {
@@ -508,7 +508,7 @@ void ddcci_delete_profile(struct profile* profile, struct monitor* monitor) {
 	}
 	
 	/* Delete the database entry */
-	struct profile** profileptr = &monitor->profiles;
+	struct Profile** profileptr = &monitor->profiles;
 	
 	while (*profileptr) {
 		if (*profileptr == profile) { /* We found the profile to delete. */
@@ -526,7 +526,7 @@ void ddcci_delete_profile(struct profile* profile, struct monitor* monitor) {
 	fprintf(stderr, _("ddcci_delete_profile: Error, could not find the profile to delete.\n"));
 }
 
-void ddcci_free_profile(struct profile* profile) {
+void ddcci_free_profile(struct Profile* profile) {
 	if (profile->next)
 		ddcci_free_profile(profile->next);
 	

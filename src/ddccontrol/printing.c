@@ -28,13 +28,13 @@
 #include <stdio.h>
 
 
-void print_control_value(struct monitor *mon, unsigned char ctrl, unsigned short value, unsigned short maximum, int result)
+void print_control_value(struct Monitor *mon, unsigned char ctrl, unsigned short value, unsigned short maximum, int result)
 {
-	struct monitor_db *monitor = mon != NULL ? mon->db : NULL;
-	struct group_db *group;
-	struct subgroup_db *subgroup;
-	struct control_db *control;
-	struct value_db *valued;
+	struct MonitorDB *monitor = mon != NULL ? mon->db : NULL;
+	struct GroupDB *group;
+	struct SubgroupDB *subgroup;
+	struct ControlDB *control;
+	struct ValueDB *valued;
 	xmlChar *controlname = NULL;
 	xmlChar *valuename = NULL;
 

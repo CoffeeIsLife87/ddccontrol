@@ -168,8 +168,8 @@ void ddcpci_release()
 		printf("ddcpci being released...\n");
 	}
 	if (msqid >= 0) {
-		struct query qlist;
-		memset(&qlist, 0, sizeof(struct query));
+		struct Query qlist;
+		memset(&qlist, 0, sizeof(struct Query));
 		qlist.mtype = 1;
 		qlist.qtype = QUERY_QUIT;
 		
@@ -184,11 +184,11 @@ void ddcpci_release()
 }
 
 /* Returns : 0 - OK, negative value - timed out or another error */
-int ddcpci_read(struct answer* manswer)
+int ddcpci_read(struct Answer* manswer)
 {
 	int i, ret;
 	for (i = DDCPCI_RETRIES;; i--) {
-		if ((ret = msgrcv(msqid, manswer, sizeof(struct answer) - sizeof(long), 2, IPC_NOWAIT)) < 0) {
+		if ((ret = msgrcv(msqid, manswer, sizeof(struct Answer) - sizeof(long), 2, IPC_NOWAIT)) < 0) {
 			if (errno != ENOMSG) {
 				return -errno;
 			}
@@ -214,8 +214,8 @@ int ddcpci_read(struct answer* manswer)
 /* Send heartbeat so ddcpci doesn't timeout */
 void ddcpci_send_heartbeat() {
 	if (msqid >= 0) {
-		struct query qheart;
-		memset(&qheart, 0, sizeof(struct query));
+		struct Query qheart;
+		memset(&qheart, 0, sizeof(struct Query));
 		qheart.mtype = 1;
 		qheart.qtype = QUERY_HEARTBEAT;
 		
@@ -261,11 +261,11 @@ void ddcci_release() {
 
 /* write len bytes (stored in buf) to i2c address addr */
 /* return 0 on success, -1 on failure */
-static int i2c_write(struct monitor* mon, unsigned int addr, unsigned char *buf, unsigned char len)
+static int i2c_write(struct Monitor* mon, unsigned int addr, unsigned char *buf, unsigned char len)
 {
-	switch (mon->type) {
+	switch (mon->dev_type) {
 #ifdef HAVE_I2C_DEV
-	case dev:
+	case DEV_TYPE_DEV:
 	{	
 		int i;
 		struct i2c_rdwr_ioctl_data msg_rdwr;
@@ -306,10 +306,10 @@ static int i2c_write(struct monitor* mon, unsigned int addr, unsigned char *buf,
 	}
 #endif
 #ifdef HAVE_DDCPCI
-	case pci:
+	case DEV_TYPE_PCI:
 	{
-		struct query qdata;
-		memset(&qdata, 0, sizeof(struct query));
+		struct Query qdata;
+		memset(&qdata, 0, sizeof(struct Query));
 		qdata.mtype = 1;
 		qdata.qtype = QUERY_DATA;
 		qdata.addr = addr;
@@ -323,7 +323,7 @@ static int i2c_write(struct monitor* mon, unsigned int addr, unsigned char *buf,
 			return -3;
 		}
 		
-		struct answer adata;
+		struct Answer adata;
 		
 		if (ddcpci_read(&adata) < 0) {
 			if (!mon->probing || verbosity) {
@@ -352,11 +352,11 @@ static int i2c_write(struct monitor* mon, unsigned int addr, unsigned char *buf,
 
 /* read at most len bytes from i2c address addr, to buf */
 /* return -1 on failure */
-static int i2c_read(struct monitor* mon, unsigned int addr, unsigned char *buf, unsigned char len)
+static int i2c_read(struct Monitor* mon, unsigned int addr, unsigned char *buf, unsigned char len)
 {
-	switch (mon->type) {
+	switch (mon->dev_type) {
 #ifdef HAVE_I2C_DEV
-	case dev:
+	case DEV_TYPE_DEV:
 	{
 		struct i2c_rdwr_ioctl_data msg_rdwr;
 		struct i2c_msg             i2cmsg;
@@ -397,11 +397,11 @@ static int i2c_read(struct monitor* mon, unsigned int addr, unsigned char *buf, 
 	}
 #endif
 #ifdef HAVE_DDCPCI
-	case pci:
+	case DEV_TYPE_PCI:
 	{
 		int ret;
-		struct query qdata;
-		memset(&qdata, 0, sizeof(struct query));
+		struct Query qdata;
+		memset(&qdata, 0, sizeof(struct Query));
 		qdata.mtype = 1;
 		qdata.qtype = QUERY_DATA;
 		qdata.addr = addr;
@@ -415,7 +415,7 @@ static int i2c_read(struct monitor* mon, unsigned int addr, unsigned char *buf, 
 			return -3;
 		}
 		
-		struct answer adata;
+		struct Answer adata;
 		
 		if ((ret = ddcpci_read(&adata)) < 0) {
 			if (!mon->probing || verbosity) {
@@ -434,7 +434,7 @@ static int i2c_read(struct monitor* mon, unsigned int addr, unsigned char *buf, 
 	}
 #endif
 #ifdef HAVE_AMDADL
-	case type_adl:
+	case DEV_TYPE_ADL:
 	{
 		return amd_adl_i2c_read(mon->adl_adapter, mon->adl_display, addr, buf, len);
 	}
@@ -445,7 +445,7 @@ static int i2c_read(struct monitor* mon, unsigned int addr, unsigned char *buf, 
 }
 
 /* stalls execution, allowing write transaction to complete */
-static void ddcci_delay(struct monitor* mon, int iswrite)
+static void ddcci_delay(struct Monitor* mon, int iswrite)
 {
 	struct timeval now;
 
@@ -473,7 +473,7 @@ static void ddcci_delay(struct monitor* mon, int iswrite)
 
 /* write len bytes (stored in buf) to ddc/ci at address addr */
 /* return 0 on success, -1 on failure */
-static int ddcci_write(struct monitor* mon, unsigned char *buf, unsigned char len)
+static int ddcci_write(struct Monitor* mon, unsigned char *buf, unsigned char len)
 {
 	int i = 0;
 	unsigned char _buf[MAX_BYTES + 3];
@@ -498,7 +498,7 @@ static int ddcci_write(struct monitor* mon, unsigned char *buf, unsigned char le
 }
 
 /* read ddc/ci formatted frame from ddc/ci at address addr, to buf */
-static int ddcci_read(struct monitor* mon, unsigned char *buf, unsigned char len)
+static int ddcci_read(struct Monitor* mon, unsigned char *buf, unsigned char len)
 {
 	unsigned char _buf[MAX_BYTES];
 	unsigned char xor = MAGIC_XOR;
@@ -559,7 +559,7 @@ static int ddcci_read(struct monitor* mon, unsigned char *buf, unsigned char len
 }
 
 /* write value to register ctrl of ddc/ci at address addr */
-int ddcci_writectrl(struct monitor* mon, unsigned char ctrl, unsigned short value, int delay)
+int ddcci_writectrl(struct Monitor* mon, unsigned char ctrl, unsigned short value, int delay)
 {
 	if(mon->__vtable) {
 		return mon->__vtable->writectrl(mon, ctrl, value, delay);
@@ -587,7 +587,7 @@ int ddcci_writectrl(struct monitor* mon, unsigned char ctrl, unsigned short valu
 }
 
 /* read register ctrl raw data of ddc/ci at address addr */
-static int ddcci_raw_readctrl(struct monitor* mon, 
+static int ddcci_raw_readctrl(struct Monitor* mon, 
 	unsigned char ctrl, unsigned char *buf, unsigned char len)
 {
 	unsigned char _buf[2];
@@ -603,7 +603,7 @@ static int ddcci_raw_readctrl(struct monitor* mon,
 	return ddcci_read(mon, buf, len);
 }
 
-int ddcci_readctrl(struct monitor* mon, unsigned char ctrl, 
+int ddcci_readctrl(struct Monitor* mon, unsigned char ctrl, 
 	unsigned short *value, unsigned short *maximum)
 {
 	if(mon->__vtable) {
@@ -638,7 +638,7 @@ int ddcci_readctrl(struct monitor* mon, unsigned char ctrl,
  *
  * add: if true: add caps_str to caps, otherwise remove caps_str from the caps.
  */
-int ddcci_parse_caps(const char* caps_str, struct caps* caps, int add)
+int ddcci_parse_caps(const char* caps_str, struct Caps* caps, int add)
 {
 //	printf("Parsing CAPS (%s).\n", caps_str);
 	int pos = 0; /* position in caps_str */
@@ -683,11 +683,11 @@ int ddcci_parse_caps(const char* caps_str, struct caps* caps, int add)
 			}
 			else if ((stype == 1) && (level == 2)) {
 				if (strncmp(caps_str+pos, "lcd", 3) == 0) {
-					caps->type = lcd;
+					caps->type = MONITOR_TYPE_LCD;
 					pos += 2;
 				}
 				else if (strncmp(caps_str+pos, "crt", 3) == 0) {
-					caps->type = crt;
+					caps->type = MONITOR_TYPE_CRT;
 					pos += 2;
 				}
 			}
@@ -710,7 +710,7 @@ int ddcci_parse_caps(const char* caps_str, struct caps* caps, int add)
 					return -1;
 				}
 				if (add) {
-					caps->vcp[ind] = malloc(sizeof(struct vcp_entry));
+					caps->vcp[ind] = malloc(sizeof(struct VcpEntry));
 					caps->vcp[ind]->values_len = -1;
 					caps->vcp[ind]->values = NULL;
 				}
@@ -771,7 +771,7 @@ int ddcci_parse_caps(const char* caps_str, struct caps* caps, int add)
 }
 
 /* read capabilities raw data of ddc/ci at address addr starting at offset to buf */
-static int ddcci_raw_caps(struct monitor* mon, unsigned int offset, unsigned char *buf, unsigned char len)
+static int ddcci_raw_caps(struct Monitor* mon, unsigned int offset, unsigned char *buf, unsigned char len)
 {
 	unsigned char _buf[3];
 
@@ -787,7 +787,7 @@ static int ddcci_raw_caps(struct monitor* mon, unsigned int offset, unsigned cha
 	return ddcci_read(mon, buf, len);
 }
 
-int ddcci_caps(struct monitor* mon)
+int ddcci_caps(struct Monitor* mon)
 {
 	mon->caps.raw_caps = (char*)malloc(16);
 	int bufferpos = 0;
@@ -868,7 +868,7 @@ int ddcci_caps(struct monitor* mon)
 }
 
 /* save current settings */
-int ddcci_command(struct monitor* mon, unsigned char cmd)
+int ddcci_command(struct Monitor* mon, unsigned char cmd)
 {
 	unsigned char _buf[1];
 
@@ -877,7 +877,7 @@ int ddcci_command(struct monitor* mon, unsigned char cmd)
 	return ddcci_write(mon, _buf, sizeof(_buf));
 }
 
-int ddcci_read_edid(struct monitor* mon, int addr) 
+int ddcci_read_edid(struct Monitor* mon, int addr) 
 {
 	unsigned char buf[128];
 	buf[0] = 0;	/* eeprom offset */
@@ -934,9 +934,9 @@ int ddcci_read_edid(struct monitor* mon, int addr)
   - -2 if EDID is not available
   - -3 if file can't be opened 
 */
-static int ddcci_open_with_addr(struct monitor* mon, const char* filename, int addr, int edid, int probing) 
+static int ddcci_open_with_addr(struct Monitor* mon, const char* filename, int addr, int edid, int probing) 
 {
-	memset(mon, 0, sizeof(struct monitor));
+	memset(mon, 0, sizeof(struct Monitor));
 	
 	mon->probing = probing;
 	
@@ -946,15 +946,15 @@ static int ddcci_open_with_addr(struct monitor* mon, const char* filename, int a
 				perror(filename);
 			return -3;
 		}
-		mon->type = dev;
+		mon->dev_type = DEV_TYPE_DEV;
 	}
 #ifdef HAVE_DDCPCI
 	else if (strncmp(filename, "pci:", 4) == 0) {
 		if (verbosity)
 			printf(_("Device: %s\n"), filename);
 		
-		struct query qopen;
-		memset(&qopen, 0, sizeof(struct query));
+		struct Query qopen;
+		memset(&qopen, 0, sizeof(struct Query));
 		qopen.mtype = 1;
 		qopen.qtype = QUERY_OPEN;
 		
@@ -970,14 +970,14 @@ static int ddcci_open_with_addr(struct monitor* mon, const char* filename, int a
 		}
 		
 		
-		struct answer aopen;
+		struct Answer aopen;
 		
 		if (ddcpci_read(&aopen) < 0) {
 			perror(_("Error while reading open message answer"));
 			return -3;
 		}
 		
-		mon->type = pci;
+		mon->dev_type = DEV_TYPE_PCI;
 	}
 #endif
 #ifdef HAVE_AMDADL
@@ -994,7 +994,7 @@ static int ddcci_open_with_addr(struct monitor* mon, const char* filename, int a
 			return -3;
 		}
 
-		mon->type = type_adl;
+		mon->dev_type = DEV_TYPE_ADL;
 	}
 #endif
 	else {
@@ -1018,17 +1018,17 @@ static int ddcci_open_with_addr(struct monitor* mon, const char* filename, int a
 		buffer[0] = 0;
 		strncat(buffer, mon->pnpid, 3); /* copy manufacturer id */
 		switch(mon->caps.type) {
-		case lcd:
+		case MONITOR_TYPE_LCD:
 			strcat(buffer, "lcd");
 			mon->db = ddcci_create_db(buffer, &mon->caps, 1);
 			mon->fallback = 1;
 			break;
-		case crt:
+		case MONITOR_TYPE_CRT:
 			strcat(buffer, "crt");
 			mon->db = ddcci_create_db(buffer, &mon->caps, 1);
 			mon->fallback = 1;
 			break;
-		case unk:
+		case MONITOR_TYPE_UNK:
 			break;
 		}
 		
@@ -1039,7 +1039,7 @@ static int ddcci_open_with_addr(struct monitor* mon, const char* filename, int a
 		}
 	}
 	
-	if ((mon->db) && (mon->db->init == samsung)) {
+	if ((mon->db) && (mon->db->init == INIT_TYPE_SAMSUNG)) {
 		if (ddcci_writectrl(mon, DDCCI_CTRL, DDCCI_CTRL_ENABLE, 0) < 0) {
 			return -1;
 		}
@@ -1053,12 +1053,12 @@ static int ddcci_open_with_addr(struct monitor* mon, const char* filename, int a
 	return 0;
 }
 
-int ddcci_open(struct monitor* mon, const char* filename, int probing) 
+int ddcci_open(struct Monitor* mon, const char* filename, int probing) 
 {
 	return ddcci_open_with_addr(mon, filename, DEFAULT_DDCCI_ADDR, DEFAULT_EDID_ADDR, probing);
 }
 
-int ddcci_save(struct monitor* mon) 
+int ddcci_save(struct Monitor* mon) 
 {
 	return ddcci_command(mon, DDCCI_COMMAND_SAVE);
 }
@@ -1068,7 +1068,7 @@ int ddcci_save(struct monitor* mon)
   - -1 if DDC/CI is not available
   - -3 if file can't be closed 
 */
-int ddcci_close(struct monitor* mon)
+int ddcci_close(struct Monitor* mon)
 {
 	// TODO: closing and freeing are different operations, split the function!
 
@@ -1078,7 +1078,7 @@ int ddcci_close(struct monitor* mon)
 
 	if (mon->db)
 	{
-		if (mon->db->init == samsung) {
+		if (mon->db->init == INIT_TYPE_SAMSUNG) {
 			if ((ddcci_writectrl(mon, DDCCI_CTRL, DDCCI_CTRL_DISABLE, 0)) < 0) {
 				return -1;
 			}
@@ -1117,8 +1117,8 @@ int ddcci_close(struct monitor* mon)
 	return 0;
 }
 
-void ddcci_probe_device(char* filename, struct monitorlist** current, struct monitorlist*** last) {
-	struct monitor mon;
+void ddcci_probe_device(char* filename, struct MonitorList** current, struct MonitorList*** last) {
+	struct Monitor mon;
 	int ret = ddcci_open(&mon, filename, 1);
 	
 	if (verbosity) {
@@ -1126,7 +1126,7 @@ void ddcci_probe_device(char* filename, struct monitorlist** current, struct mon
 	}
 	
 	if (ret > -2) { /* At least the EDID has been read correctly */
-		(*current) = malloc(sizeof(struct monitorlist));
+		(*current) = malloc(sizeof(struct MonitorList));
 		(*current)->filename = filename;
 		(*current)->supported = (ret == 0);
 		if (mon.db) {
@@ -1149,12 +1149,12 @@ void ddcci_probe_device(char* filename, struct monitorlist** current, struct mon
 	ddcci_close(&mon);
 }
 
-struct monitorlist* ddcci_probe() {
+struct MonitorList* ddcci_probe() {
 	char* filename = NULL;
 	
-	struct monitorlist* list = NULL;
-	struct monitorlist* current = NULL;
-	struct monitorlist** last = &list;
+	struct MonitorList* list = NULL;
+	struct MonitorList* current = NULL;
+	struct MonitorList** last = &list;
 	
 	printf(_("Probing for available monitors"));
 	if (verbosity)
@@ -1164,8 +1164,8 @@ struct monitorlist* ddcci_probe() {
 #ifdef HAVE_DDCPCI
 	/* Fetch bus list from ddcpci */
 	if (msqid >= 0) {
-		struct query qlist;
-		memset(&qlist, 0, sizeof(struct query));
+		struct Query qlist;
+		memset(&qlist, 0, sizeof(struct Query));
 		qlist.mtype = 1;
 		qlist.qtype = QUERY_LIST;
 		
@@ -1174,7 +1174,7 @@ struct monitorlist* ddcci_probe() {
 		}
 		else {
 			int len = 0, i;
-			struct answer alist;
+			struct Answer alist;
 			char** filelist = NULL;
 			
 			while (1) {
@@ -1187,7 +1187,7 @@ struct monitorlist* ddcci_probe() {
 						break;
 					}
 					
-					filelist = realloc(filelist, (len+1)*sizeof(struct answer));
+					filelist = realloc(filelist, (len+1)*sizeof(struct Answer));
 					
 					//printf("<==%02x:%02x.%d-%d\n", alist.bus.bus, alist.bus.dev, alist.bus.func, alist.bus.i2cbus);
 					filelist[len] = malloc(32);
@@ -1277,7 +1277,7 @@ struct monitorlist* ddcci_probe() {
 	return list;
 }
 
-void ddcci_free_list(struct monitorlist* list) {
+void ddcci_free_list(struct MonitorList* list) {
 	if (list == NULL) {
 		return;
 	}

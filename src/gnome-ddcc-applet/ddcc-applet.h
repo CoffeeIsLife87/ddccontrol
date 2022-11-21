@@ -55,9 +55,9 @@ _DdccApplet
 	GtkWidget* w_properties_dialog;
 	GtkWidget* w_properties_monitor;
 
-	struct monitor* monitor;
+	struct Monitor* monitor;
 	char monitor_name[256];
-	struct profile* profile;
+	struct Profile* profile;
 	
 	DdccError error;
 } DdccApplet;

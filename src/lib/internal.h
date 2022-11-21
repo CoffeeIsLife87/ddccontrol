@@ -32,10 +32,10 @@
 #define N_(String) String
 #endif
 
-struct monitor_vtable {
-	int (*readctrl)(struct monitor* mon, unsigned char ctrl, unsigned short *value, unsigned short *maximum);
-	int (*writectrl)(struct monitor* mon, unsigned char ctrl, unsigned short value, int delay);
-	int (*close)(struct monitor* mon);
+struct Monitor_vtable {
+	int (*readctrl)(struct Monitor* mon, unsigned char ctrl, unsigned short *value, unsigned short *maximum);
+	int (*writectrl)(struct Monitor* mon, unsigned char ctrl, unsigned short value, int delay);
+	int (*close)(struct Monitor* mon);
 };
 
 #endif //DDCCI_INTERNAL_H

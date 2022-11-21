@@ -24,15 +24,15 @@
 
 /* Read/write monitor list */
 
-struct monitorlist* ddcci_load_list();
-int ddcci_save_list(struct monitorlist* monlist);
+struct MonitorList* ddcci_load_list();
+int ddcci_save_list(struct MonitorList* monlist);
 
 /* Profile structures and functions */
 
 /* Current profile format version */
 #define PROFILEVERSION 1
 
-struct profile {
+struct Profile {
 	char* filename;
 	
 	xmlChar* name;
@@ -42,21 +42,21 @@ struct profile {
 	unsigned char address[256];
 	unsigned short value[256];
 	
-	struct profile* next; /* Next profile in the list (used by get_all_profiles) */
+	struct Profile* next; /* Next profile in the list (used by get_all_profiles) */
 };
 
-struct profile* ddcci_create_profile(struct monitor* mon, const unsigned char* address, int size);
-int ddcci_apply_profile(struct profile* profile, struct monitor* mon);
+struct Profile* ddcci_create_profile(struct Monitor* mon, const unsigned char* address, int size);
+int ddcci_apply_profile(struct Profile* profile, struct Monitor* mon);
 
-void ddcci_set_profile_name(struct profile* profile, const char* name);
+void ddcci_set_profile_name(struct Profile* profile, const char* name);
 
-int ddcci_get_all_profiles(struct monitor* mon);
+int ddcci_get_all_profiles(struct Monitor* mon);
 
-struct profile* ddcci_load_profile(const char* filename);
-int ddcci_save_profile(struct profile* profile, struct monitor* monitor);
+struct Profile* ddcci_load_profile(const char* filename);
+int ddcci_save_profile(struct Profile* profile, struct Monitor* monitor);
 
-void ddcci_delete_profile(struct profile* profile, struct monitor* monitor);
+void ddcci_delete_profile(struct Profile* profile, struct Monitor* monitor);
 
-void ddcci_free_profile(struct profile* profile);
+void ddcci_free_profile(struct Profile* profile);
 
 #endif //PROFILE_H

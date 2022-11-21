@@ -28,67 +28,67 @@
 /* Current database version */
 #define DBVERSION 3
 
-enum control_type {
-value = 0,
-command = 1,
-list = 2
+enum ControlType {
+	CTRL_TYPE_VALUE,
+	CTRL_TYPE_COMMAND,
+	CTRL_TYPE_LIST
 };
 
-enum refresh_type {
-none = 0,
-all = 1
+enum RefreshType {
+	REFRESH_TYPE_NONE,
+	REFRESH_TYPE_ALL
 };
 
-enum init_type {
-unknown = 0,
-standard = 1,
-samsung = 2
+enum InitType {
+	INIT_TYPE_UNKNOWN,
+	INIT_TYPE_STANDARD,
+	INIT_TYPE_SAMSUNG,
 };
 
-struct value_db {
+struct ValueDB {
 	xmlChar* id;
 	xmlChar* name;
 	unsigned char value;
 	
-	struct value_db* next;
+	struct ValueDB* next;
 };
 
-struct control_db {
+struct ControlDB {
 	xmlChar* id;
 	xmlChar* name;
 	unsigned char address;
 	int delay; /* -1 indicate default value */
-	enum control_type type;
-	enum refresh_type refresh;
+	enum ControlType type;
+	enum RefreshType refresh;
 	
-	struct control_db* next;
-	struct value_db* value_list;
+	struct ControlDB* next;
+	struct ValueDB* value_list;
 };
 
-struct subgroup_db {
+struct SubgroupDB {
 	xmlChar* name;
 	xmlChar* pattern;
 	
-	struct subgroup_db* next;
-	struct control_db* control_list;
+	struct SubgroupDB* next;
+	struct ControlDB* control_list;
 };
 
-struct group_db {
+struct GroupDB {
 	xmlChar* name;
 	
-	struct group_db* next;
-	struct subgroup_db* subgroup_list;
+	struct GroupDB* next;
+	struct SubgroupDB* subgroup_list;
 };
 
-struct monitor_db {
+struct MonitorDB {
 	xmlChar* name;
-	enum init_type init;
+	enum InitType init;
 	
-	struct group_db* group_list;
+	struct GroupDB* group_list;
 };
 
-struct monitor_db* ddcci_create_db(const char* pnpname, struct caps* caps, int faulttolerance);
-void ddcci_free_db(struct monitor_db* mon_db);
+struct MonitorDB* ddcci_create_db(const char* pnpname, struct Caps* caps, int faulttolerance);
+void ddcci_free_db(struct MonitorDB* mon_db);
 
 int ddcci_init_db(char* usedatadir);
 void ddcci_release_db();

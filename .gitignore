@@ -57,3 +57,4 @@ Makefile
 Makefile.in
 
 /scripts/tmp
+/.vscode/

@@ -37,7 +37,7 @@
 
 #define RETRYS 3 /* number of retrys */
 
-static void dumpctrl(struct monitor *mon, unsigned char ctrl, int force)
+static void dumpctrl(struct Monitor *mon, unsigned char ctrl, int force)
 {
 	unsigned short value, maximum;
 	int retry, result;
@@ -53,12 +53,12 @@ static void dumpctrl(struct monitor *mon, unsigned char ctrl, int force)
 }
 
 /* Find the delay we must respect after writing to an address in the database. */
-static int find_write_delay(struct monitor *mon, char ctrl)
+static int find_write_delay(struct Monitor *mon, char ctrl)
 {
-	struct monitor_db *monitor = mon->db;
-	struct group_db *group;
-	struct subgroup_db *subgroup;
-	struct control_db *control;
+	struct MonitorDB *monitor = mon->db;
+	struct GroupDB *group;
+	struct SubgroupDB *subgroup;
+	struct ControlDB *control;
 
 	if (monitor) {
 		/* loop through groups */
@@ -100,7 +100,7 @@ static void usage(char *name)
 
 static void check_integrity(char *datadir, char *pnpname)
 {
-	struct monitor_db *mon_db;
+	struct MonitorDB *mon_db;
 
 	printf(_("Checking %s integrity...\n"), "options.xml");
 	if (!ddcci_init_db(datadir)) {
@@ -121,7 +121,7 @@ static void check_integrity(char *datadir, char *pnpname)
 	}
 	strcat(buffer, "))");
 
-	struct caps caps;
+	struct Caps caps;
 	ddcci_parse_caps(buffer, &caps, 1);
 
 	printf(_("Checking %s integrity...\n"), pnpname);
@@ -158,14 +158,14 @@ int main(int argc, char **argv)
 	DDCControl *proxy = NULL;
 
 	/* filedescriptor and name of device */
-	struct monitor *mon;
+	struct Monitor *mon;
 	char *fn;
 
 	char *datadir = NULL;
 	char *pnpname = NULL; /* pnpname for -i parameter */
 
 	/* -l (load profile) parameter */
-	struct profile *profilefile = NULL;
+	struct Profile *profilefile = NULL;
 
 	/* what to do */
 	int dump = 0;
@@ -293,8 +293,8 @@ int main(int argc, char **argv)
 	if (probe) {
 		fn = NULL;
 
-		struct monitorlist *monlist;
-		struct monitorlist *current;
+		struct MonitorList *monlist;
+		struct MonitorList *current;
 
 		if (can_use_dbus_daemon()) {
 			monlist = ddcci_dbus_rescan_monitors(proxy);
@@ -339,7 +339,7 @@ int main(int argc, char **argv)
 	if (can_use_dbus_daemon()) {
 		ret = ddcci_dbus_open(proxy, &mon, fn);
 	} else {
-		mon = malloc(sizeof(struct monitor));
+		mon = malloc(sizeof(struct Monitor));
 		ret = ddcci_open(mon, fn, 0);
 	}
 
@@ -395,13 +395,13 @@ int main(int argc, char **argv)
 					printf("\n");
 					printf(_("\tType: "));
 					switch (mon->caps.type) {
-					case lcd:
+					case MONITOR_TYPE_LCD:
 						printf(_("LCD"));
 						break;
-					case crt:
+					case MONITOR_TYPE_CRT:
 						printf(_("CRT"));
 						break;
-					case unk:
+					case MONITOR_TYPE_UNK:
 						printf(_("Unknown"));
 						break;
 					}
@@ -465,11 +465,11 @@ int main(int argc, char **argv)
 				dumpctrl(mon, i, force);
 			}
 		} else if (ctrl == -1 && caps == 0) {
-			struct monitor_db *monitor = mon->db;
-			struct group_db *group;
-			struct subgroup_db *subgroup;
-			struct control_db *control;
-			struct value_db *valued;
+			struct MonitorDB *monitor = mon->db;
+			struct GroupDB *group;
+			struct SubgroupDB *subgroup;
+			struct ControlDB *control;
+			struct ValueDB *valued;
 
 			if (monitor) {
 				printf("\n= %s\n", monitor->name);

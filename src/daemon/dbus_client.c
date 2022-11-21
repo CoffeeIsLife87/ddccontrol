@@ -27,44 +27,44 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct dbus_monitor {
-	struct monitor mon;
+struct DbusMonitor {
+	struct Monitor mon;
 
 	DDCControl *proxy;
 	const char *filename;
 };
 
-static int dbus_monitor_readctrl(struct monitor *mon, unsigned char ctrl, unsigned short *value, unsigned short *maximum)
+static int dbus_monitor_readctrl(struct Monitor *mon, unsigned char ctrl, unsigned short *value, unsigned short *maximum)
 {
-	struct dbus_monitor *dbus_mon = (struct dbus_monitor *)mon;
+	struct DbusMonitor *dbus_mon = (struct DbusMonitor *)mon;
 	return ddcci_dbus_readctrl(dbus_mon->proxy, dbus_mon->filename, ctrl, value, maximum);
 }
 
-static int dbus_monitor_writectrl(struct monitor *mon, unsigned char ctrl, unsigned short value, int delay)
+static int dbus_monitor_writectrl(struct Monitor *mon, unsigned char ctrl, unsigned short value, int delay)
 {
-	struct dbus_monitor *dbus_mon = (struct dbus_monitor *)mon;
+	struct DbusMonitor *dbus_mon = (struct DbusMonitor *)mon;
 	return ddcci_dbus_writectrl(dbus_mon->proxy, dbus_mon->filename, ctrl, value);
 }
 
-static int dbus_monitor_close(struct monitor *mon)
+static int dbus_monitor_close(struct Monitor *mon)
 {
 	// TODO: think about architecture, maybe notify D-Bus daemon?
 	return 0;
 }
 
-static const struct monitor_vtable dbus_monitor_vtable = {
+static const struct Monitor_vtable dbus_monitor_vtable = {
 	.readctrl = dbus_monitor_readctrl,
 	.writectrl = dbus_monitor_writectrl,
 	.close = dbus_monitor_close
 };
 
-int ddcci_dbus_open(DDCControl *proxy, struct monitor **_mon, const char *filename)
+int ddcci_dbus_open(DDCControl *proxy, struct Monitor **_mon, const char *filename)
 {
 	char *pnpid = NULL;
 	GError *error = NULL;
 
-	struct dbus_monitor *dbus_mon;
-	struct monitor *mon;
+	struct DbusMonitor *dbus_mon;
+	struct Monitor *mon;
 
 	dbus_mon = calloc(1, sizeof(*dbus_mon));
 	*_mon = mon = &dbus_mon->mon;
@@ -96,17 +96,17 @@ int ddcci_dbus_open(DDCControl *proxy, struct monitor **_mon, const char *filena
 		buffer[0] = 0;
 		strncat(buffer, mon->pnpid, 3); /* copy manufacturer id */
 		switch (mon->caps.type) {
-		case lcd:
+		case MONITOR_TYPE_LCD:
 			strcat(buffer, "lcd");
 			mon->db = ddcci_create_db(buffer, &mon->caps, 1);
 			mon->fallback = 1;
 			break;
-		case crt:
+		case MONITOR_TYPE_CRT:
 			strcat(buffer, "crt");
 			mon->db = ddcci_create_db(buffer, &mon->caps, 1);
 			mon->fallback = 1;
 			break;
-		case unk:
+		case MONITOR_TYPE_UNK:
 			break;
 		}
 
@@ -152,10 +152,10 @@ int ddcci_dbus_writectrl(DDCControl *proxy, char *fn,
 	}
 }
 
-struct monitorlist *ddcci_dbus_rescan_monitors(DDCControl *proxy)
+struct MonitorList *ddcci_dbus_rescan_monitors(DDCControl *proxy)
 {
 	int i;
-	struct monitorlist *monlist = NULL, *current = NULL;
+	struct MonitorList *monlist = NULL, *current = NULL;
 
 	char **devices = NULL, **names = NULL;
 	char *supported = NULL, *digital = NULL;
@@ -177,9 +177,9 @@ struct monitorlist *ddcci_dbus_rescan_monitors(DDCControl *proxy)
 
 	for (i = 0; devices[i] != NULL && i < supported_n; i++) {
 		if (current == NULL) {
-			monlist = current = malloc(sizeof(struct monitorlist));
+			monlist = current = malloc(sizeof(struct MonitorList));
 		} else {
-			current->next = malloc(sizeof(struct monitorlist));
+			current->next = malloc(sizeof(struct MonitorList));
 			current = current->next;
 		}
 		current->filename = devices[i];

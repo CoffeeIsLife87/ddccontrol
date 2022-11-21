@@ -49,7 +49,7 @@ int get_verbosity(); /* Defined in ddcci.c */
 
 /* End of CAPS structs/functions */
 
-int ddcci_get_value_list(xmlNodePtr options_control, xmlNodePtr mon_control, struct control_db *current_control, int command, int faulttolerance)
+int ddcci_get_value_list(xmlNodePtr options_control, xmlNodePtr mon_control, struct ControlDB *current_control, int command, int faulttolerance)
 {
 	xmlNodePtr value, cur;
 	xmlChar *options_valueid, *options_valuename, *mon_valueid;
@@ -71,9 +71,9 @@ int ddcci_get_value_list(xmlNodePtr options_control, xmlNodePtr mon_control, str
 	matchedvalues = malloc((nvalues+1)*sizeof(char)); /* Will not be freed on error, no problem */
 	memset(matchedvalues, 0, nvalues*sizeof(char));
 	
-	struct value_db *current_value = malloc(sizeof(struct value_db));
-	struct value_db **last_value_ref = &current_control->value_list;
-	memset(current_value, 0, sizeof(struct value_db));
+	struct ValueDB *current_value = malloc(sizeof(struct ValueDB));
+	struct ValueDB **last_value_ref = &current_control->value_list;
+	memset(current_value, 0, sizeof(struct ValueDB));
 	
 	value = options_control->xmlChildrenNode;
 	while (value != NULL)
@@ -120,8 +120,8 @@ int ddcci_get_value_list(xmlNodePtr options_control, xmlNodePtr mon_control, str
 						
 						*last_value_ref = current_value;
 						last_value_ref = &current_value->next;
-						current_value = malloc(sizeof(struct value_db));
-						memset(current_value, 0, sizeof(struct value_db));
+						current_value = malloc(sizeof(struct ValueDB));
+						memset(current_value, 0, sizeof(struct ValueDB));
 						
 						matchedvalues[i] = 1;
 						
@@ -166,18 +166,18 @@ int ddcci_get_value_list(xmlNodePtr options_control, xmlNodePtr mon_control, str
 }
 
 int ddcci_add_controls_to_subgroup(xmlNodePtr control, xmlNodePtr mon_control, 
-		struct subgroup_db *current_group, struct vcp_entry** vcp, char* defined, char *matchedcontrols, int faulttolerance) {
+		struct SubgroupDB *current_group, struct VcpEntry** vcp, char* defined, char *matchedcontrols, int faulttolerance) {
 	xmlNodePtr cur;
 	xmlChar *mon_ctrlid;
 	xmlChar *options_ctrlid, *options_ctrlname;
-	enum refresh_type options_refresh;
+	enum RefreshType options_refresh;
 	xmlChar *tmp;
 	char *endptr;
 	int i;
 	
-	struct control_db *current_control = malloc(sizeof(struct control_db));
-	struct control_db **last_control_ref = &current_group->control_list;	
-	memset(current_control, 0, sizeof(struct control_db));
+	struct ControlDB *current_control = malloc(sizeof(struct ControlDB));
+	struct ControlDB **last_control_ref = &current_group->control_list;	
+	memset(current_control, 0, sizeof(struct ControlDB));
 	
 	/* TODO: fix it, don't break order. */
 	/* This might break control order, but it is no big deal... */
@@ -197,10 +197,10 @@ int ddcci_add_controls_to_subgroup(xmlNodePtr control, xmlNodePtr mon_control,
 			tmp = xmlGetProp(control, BAD_CAST "refresh");
 			if (tmp) {
 				if (!xmlStrcmp(tmp, BAD_CAST "none")) {
-					options_refresh = none;
+					options_refresh = REFRESH_TYPE_NONE;
 				}
 				else if (!xmlStrcmp(tmp, BAD_CAST "all")) {
-					options_refresh = all;
+					options_refresh = REFRESH_TYPE_ALL;
 				}
 				else {
 					DDCCI_DB_RETURN_IF(1, 0, _("Invalid refresh type (!= none, != all)."), control);
@@ -208,7 +208,7 @@ int ddcci_add_controls_to_subgroup(xmlNodePtr control, xmlNodePtr mon_control,
 				xmlFree(tmp);
 			}
 			else {
-				options_refresh = none;
+				options_refresh = REFRESH_TYPE_NONE;
 			}
 			
 			//printf("!!control id=%s group=%s name=%s\n", options_ctrlid, options_groupname, options_ctrlname);
@@ -240,7 +240,7 @@ int ddcci_add_controls_to_subgroup(xmlNodePtr control, xmlNodePtr mon_control,
 							if (get_verbosity()) {
 								printf(_("Control %s has been discarded by the caps string.\n"), options_ctrlid);
 							}
-							memset(current_control, 0, sizeof(struct control_db));
+							memset(current_control, 0, sizeof(struct ControlDB));
 							break;
 						}
 						
@@ -248,7 +248,7 @@ int ddcci_add_controls_to_subgroup(xmlNodePtr control, xmlNodePtr mon_control,
 							if (get_verbosity() > 1) {
 								printf(_("Control %s (0x%02x) has already been defined.\n"), options_ctrlid, current_control->address);
 							}
-							memset(current_control, 0, sizeof(struct control_db));
+							memset(current_control, 0, sizeof(struct ControlDB));
 							break;
 						}
 						
@@ -269,15 +269,15 @@ int ddcci_add_controls_to_subgroup(xmlNodePtr control, xmlNodePtr mon_control,
 						tmp = xmlGetProp(control, BAD_CAST "type");
 						DDCCI_DB_RETURN_IF(tmp == NULL, 0, _("Can't find type property."), control);
 						if (!(xmlStrcmp(tmp, (const xmlChar *)"value"))) {
-							current_control->type = value;
+							current_control->type = CTRL_TYPE_VALUE;
 						}
 						else if (!(xmlStrcmp(tmp, (const xmlChar *)"command"))) {
-							current_control->type = command;
+							current_control->type = CTRL_TYPE_COMMAND;
 							if (ddcci_get_value_list(control, cur, current_control, 1, faulttolerance) < 0) {
 								return 0;
 							}
 							if (current_control->value_list == NULL) { /* No value defined, use the default 0x01 value */
-								struct value_db *current_value = malloc(sizeof(struct value_db));
+								struct ValueDB *current_value = malloc(sizeof(struct ValueDB));
 								current_value->id = xmlCharStrdup("default");
 								current_value->name = _D((char*)options_ctrlname);
 								current_value->value = 0x01;
@@ -286,7 +286,7 @@ int ddcci_add_controls_to_subgroup(xmlNodePtr control, xmlNodePtr mon_control,
 							}
 						}
 						else if (!(xmlStrcmp(tmp, (const xmlChar *)"list"))) {
-							current_control->type = list;
+							current_control->type = CTRL_TYPE_LIST;
 							if (ddcci_get_value_list(control, cur, current_control, 0, faulttolerance) < 0) {
 								return 0;
 							}
@@ -303,8 +303,8 @@ int ddcci_add_controls_to_subgroup(xmlNodePtr control, xmlNodePtr mon_control,
 						
 						*last_control_ref = current_control;
 						last_control_ref = &current_control->next;
-						current_control = malloc(sizeof(struct control_db));
-						memset(current_control, 0, sizeof(struct control_db));
+						current_control = malloc(sizeof(struct ControlDB));
+						memset(current_control, 0, sizeof(struct ControlDB));
 						
 						break;
 					}
@@ -333,7 +333,7 @@ int ddcci_add_controls_to_subgroup(xmlNodePtr control, xmlNodePtr mon_control,
  * prof_caps: CAPS read from one of the profile (NULL if none has been read yet)
  */
 int ddcci_create_db_protected(
-	struct monitor_db* mon_db, const char* pnpname, struct caps* caps, int recursionlevel,
+	struct MonitorDB* mon_db, const char* pnpname, struct Caps* caps, int recursionlevel,
 	char* defined, int faulttolerance)
 {
 	xmlDocPtr mon_doc;
@@ -372,12 +372,12 @@ int ddcci_create_db_protected(
 		DDCCI_DB_RETURN_IF(mon_db->name == NULL, 0,  _("Can't find name property."), root);
 	}
 	
-	if ((mon_db->init == unknown) && (tmp = xmlGetProp(root, BAD_CAST "init"))) {
+	if ((mon_db->init == INIT_TYPE_UNKNOWN) && (tmp = xmlGetProp(root, BAD_CAST "init"))) {
 		if (!(xmlStrcmp(tmp, (const xmlChar *)"standard"))) {
-			mon_db->init = standard;
+			mon_db->init = INIT_TYPE_STANDARD;
 		}
 		else if (!(xmlStrcmp(tmp, (const xmlChar *)"samsung"))) {
-			mon_db->init = samsung;
+			mon_db->init = INIT_TYPE_SAMSUNG;
 		}
 		else {
 			DDCCI_DB_RETURN_IF(1, 0,  _("Invalid type."), root);
@@ -409,8 +409,8 @@ int ddcci_create_db_protected(
 		xmlNodePtr group, subgroup;
 		xmlChar *options_groupname, *options_subgroupname;
 		
-		struct group_db *current_group;
-		struct group_db **last_group_ref = &mon_db->group_list;
+		struct GroupDB *current_group;
+		struct GroupDB **last_group_ref = &mon_db->group_list;
 		
 		/* List groups (options.xml) */
 		for (group = xmlDocGetRootElement(options_doc)->xmlChildrenNode; group != NULL; group = group->next)
@@ -419,8 +419,8 @@ int ddcci_create_db_protected(
 			if (xmlStrcmp(group->name, (const xmlChar *) "group")) { // Not a group
 				continue;
 			}
-			*last_group_ref = current_group = malloc(sizeof(struct group_db));
-			memset(current_group, 0, sizeof(struct group_db));
+			*last_group_ref = current_group = malloc(sizeof(struct GroupDB));
+			memset(current_group, 0, sizeof(struct GroupDB));
 			last_group_ref = &current_group->next;
 			/*printf("On group %p\n", current_group);*/
 			
@@ -429,8 +429,8 @@ int ddcci_create_db_protected(
 			current_group->name = _D((char*)options_groupname); /* Note: copy string, so we can free options_groupname */
 			xmlFree(options_groupname);
 			
-			struct subgroup_db *current_subgroup;
-			struct subgroup_db **last_subgroup_ref = &current_group->subgroup_list;
+			struct SubgroupDB *current_subgroup;
+			struct SubgroupDB **last_subgroup_ref = &current_group->subgroup_list;
 			
 			/* List subgroups (options.xml) */
 			for (subgroup = group->xmlChildrenNode; subgroup != NULL; subgroup = subgroup->next)
@@ -439,8 +439,8 @@ int ddcci_create_db_protected(
 				if (xmlStrcmp(subgroup->name, (const xmlChar *) "subgroup")) { // Not a subgroup
 					continue;
 				}
-				*last_subgroup_ref = current_subgroup = malloc(sizeof(struct subgroup_db));
-				memset(current_subgroup, 0, sizeof(struct subgroup_db));
+				*last_subgroup_ref = current_subgroup = malloc(sizeof(struct SubgroupDB));
+				memset(current_subgroup, 0, sizeof(struct SubgroupDB));
 				last_subgroup_ref = &current_subgroup->next;
 				
 				/*printf("On subgroup %p\n", current_subgroup);*/
@@ -492,7 +492,7 @@ int ddcci_create_db_protected(
 			/* Find, if possible, each element of options_doc in mon_doc. */
 			xmlNodePtr mon_control_child, group, subgroup, control;
 			
-			struct group_db *current_group = mon_db->group_list;
+			struct GroupDB *current_group = mon_db->group_list;
 			
 			int ncontrols = 0; /* Number of controls in monitor file */
 			char *matchedcontrols; /* Array of monitor controls with (=1) or without (=0) corresponding global control */
@@ -519,7 +519,7 @@ int ddcci_create_db_protected(
 				}
 				/*printf("On group %p\n", current_group);*/
 				
-				struct subgroup_db *current_subgroup = current_group->subgroup_list;
+				struct SubgroupDB *current_subgroup = current_group->subgroup_list;
 				
 				/* List subgroups (options.xml) */
 				for (subgroup = group->xmlChildrenNode; subgroup != NULL; subgroup = subgroup->next)
@@ -562,8 +562,8 @@ int ddcci_create_db_protected(
 	}
 	
 	if (!recursionlevel) {
-		struct group_db **group, *group_to_free;
-		struct subgroup_db **subgroup, *subgroup_to_free;
+		struct GroupDB **group, *group_to_free;
+		struct SubgroupDB **subgroup, *subgroup_to_free;
 		
 		/* loop through groups */
 		group = &mon_db->group_list;
@@ -613,10 +613,10 @@ int ddcci_create_db_protected(
  *  - 0 : fail on every database error
  "  - 1 : do not fail on minor errors
  */
-struct monitor_db* ddcci_create_db(const char* pnpname, struct caps* caps, int faulttolerance)
+struct MonitorDB* ddcci_create_db(const char* pnpname, struct Caps* caps, int faulttolerance)
 {
-	struct monitor_db* mon_db = malloc(sizeof(struct monitor_db));
-	memset(mon_db, 0, sizeof(struct monitor_db));
+	struct MonitorDB* mon_db = malloc(sizeof(struct MonitorDB));
+	memset(mon_db, 0, sizeof(struct MonitorDB));
 	
 	/* defined controls, when including another file, we don't define the same control 2 times.  */
 	char defined[256];
@@ -627,10 +627,10 @@ struct monitor_db* ddcci_create_db(const char* pnpname, struct caps* caps, int f
 		mon_db = NULL;
 	}
 	
-	if (mon_db && (mon_db->init == unknown)) {
+	if (mon_db && (mon_db->init == INIT_TYPE_UNKNOWN)) {
 		if (faulttolerance) {
 			fprintf(stderr, "Warning: init mode not set, using standard.\n");
-			mon_db->init = standard;
+			mon_db->init = INIT_TYPE_STANDARD;
 		}
 		else {
 			fprintf(stderr, "Error: init mode not set.\n");
@@ -642,12 +642,12 @@ struct monitor_db* ddcci_create_db(const char* pnpname, struct caps* caps, int f
 	return mon_db;
 }
 
-void ddcci_free_db(struct monitor_db* monitor)
+void ddcci_free_db(struct MonitorDB* monitor)
 {
-	struct group_db    *group,    *ogroup;
-	struct subgroup_db *subgroup, *osubgroup;
-	struct control_db  *control,  *ocontrol;
-	struct value_db    *value,    *ovalue;
+	struct GroupDB    *group,    *ogroup;
+	struct SubgroupDB *subgroup, *osubgroup;
+	struct ControlDB  *control,  *ocontrol;
+	struct ValueDB    *value,    *ovalue;
 	
 	xmlFree(monitor->name);
 	

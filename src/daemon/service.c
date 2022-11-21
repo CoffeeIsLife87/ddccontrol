@@ -33,7 +33,7 @@
 #define DC_BUS_ERROR_OPEN_FAILED        "ddccontrol.DDCControl.Error.OpenFailed"
 #define DC_BUS_ERROR_INVALID_DEVICE     "ddccontrol.DDCControl.Error.InvalidDevice"
 
-static struct monitorlist *monlist = NULL;
+static struct MonitorList *monlist = NULL;
 
 static int devices_count = 0;
 static char **devices = NULL;
@@ -41,14 +41,14 @@ static char *supported = NULL;
 static char **names = NULL;
 static char *digital = NULL;
 
-static struct monitor *open_monitors = NULL;
+static struct Monitor *open_monitors = NULL;
 static gboolean *monitor_open = NULL;
 static int *monitor_ret = NULL;
 
 static void rescan_monitors()
 {
 	int i, count;
-	struct monitorlist *current;
+	struct MonitorList *current;
 
 	if (monlist != NULL) {
 		free(devices);
@@ -74,7 +74,7 @@ static void rescan_monitors()
 	supported = malloc(sizeof(char) * (count));
 	names = malloc(sizeof(char *) * (count + 1));
 	digital = malloc(sizeof(char) * (count));
-	open_monitors = malloc(sizeof(struct monitor) * (count));
+	open_monitors = malloc(sizeof(struct Monitor) * (count));
 	monitor_open = malloc(sizeof(gboolean) * (count));
 	monitor_ret = malloc(sizeof(int) * (count));
 	for (i = 0, current = monlist; current != NULL; current = current->next, i = i + 1) {
@@ -91,12 +91,12 @@ static void rescan_monitors()
 
 // TODO: duplicate in main.c
 /* Find the delay we must respect after writing to an address in the database. */
-static int find_write_delay(struct monitor *mon, char ctrl)
+static int find_write_delay(struct Monitor *mon, char ctrl)
 {
-	struct monitor_db *monitor = mon->db;
-	struct group_db *group;
-	struct subgroup_db *subgroup;
-	struct control_db *control;
+	struct MonitorDB *monitor = mon->db;
+	struct GroupDB *group;
+	struct SubgroupDB *subgroup;
+	struct ControlDB *control;
 
 	if (monitor) {
 		/* loop through groups */
@@ -163,7 +163,7 @@ static gboolean can_open_device(gchar *device)
 	return FALSE;
 }
 
-static int open_monitor(struct monitor **mon, const char *device)
+static int open_monitor(struct Monitor **mon, const char *device)
 {
 	int i;
 	for (i = 0; i < devices_count; i++) {
@@ -192,7 +192,7 @@ static gboolean handle_open_monitor(DDCControl *skeleton, GDBusMethodInvocation 
                                     gchar *device)
 {
 	int ret;
-	struct monitor *mon;
+	struct Monitor *mon;
 
 	if (can_open_device(device) == FALSE) {
 		g_dbus_method_invocation_return_dbus_error(
@@ -223,7 +223,7 @@ static gboolean handle_get_control(DDCControl *skeleton, GDBusMethodInvocation *
 	int ret;
 	unsigned short value, maximum;
 	int retry, result;
-	struct monitor *mon;
+	struct Monitor *mon;
 
 	printf("DDCControl get %u for %s.\n", control, device);
 
@@ -261,7 +261,7 @@ static gboolean handle_set_control(DDCControl *skeleton, GDBusMethodInvocation *
 {
 
 	int ret;
-	struct monitor *mon;
+	struct Monitor *mon;
 
 	printf("DDCControl set %u on %s to %d.\n", control, device, value);
 

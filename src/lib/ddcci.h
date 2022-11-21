@@ -24,31 +24,37 @@
 #include <time.h>
 #include <sys/time.h>
 
-struct profile;
+struct Profile;
 
-enum monitor_type {
-unk = 0,
-lcd = 1,
-crt = 2
+enum MonitorType {
+	MONITOR_TYPE_UNK,
+	MONITOR_TYPE_LCD,
+	MONITOR_TYPE_CRT
 };
 
 /* Structure to store CAPS vcp entry (control and related values) */
-struct vcp_entry {
+struct VcpEntry {
 	int values_len; /* -1 if values are not specified */
 	unsigned short* values;
 };
 
 /* Structure to store CAPS */
-struct caps {
-	struct vcp_entry* vcp[256]; /* vcp entries */
-	enum monitor_type type;
+struct Caps {
+	struct VcpEntry* vcp[256]; /* vcp entries */
+	enum MonitorType type;
 	char* raw_caps; /* raw text caps */
+};
+
+enum DevType {
+		DEV_TYPE_DEV,
+		DEV_TYPE_PCI,
+		DEV_TYPE_ADL
 };
 
 #include "monitor_db.h"
 
-struct monitor {
-	const struct monitor_vtable *__vtable;
+struct Monitor {
+	const struct Monitor_vtable *__vtable;
 
 	int fd;
 	unsigned int addr;
@@ -56,51 +62,48 @@ struct monitor {
 	char pnpid[8];
 	unsigned char digital; /* 0 - digital, 1 - analog */
 	struct timeval last;
-	struct monitor_db* db;
-	struct caps caps;
+	struct MonitorDB* db;
+	struct Caps caps;
 	
-	struct profile* profiles; /* profiles available for this monitor. Filled by get_all_profiles. */
-	
-	enum {
-		dev
-		,pci
-		,type_adl
-	} type;
+	struct Profile* profiles; /* profiles available for this monitor. Filled by get_all_profiles. */
+	enum DevType dev_type;
 	int probing; /* are we probing? */
 	
+	/**
+	 * 0 - the db is designed for this monitor
+	 * 1 - we are using a manufacturer standard profile (warn the user)
+	 * 2 - we are using the VESA generic profile (warn the user)
+	*/
 	int fallback;
-	/* 0 - the db is designed for this monitor
-	   1 - we are using a manufacturer standard profile (warn the user)
-	   2 - we are using the VESA generic profile (warn the user) */
 };
 
 /* Struct used to return monitor data probed by ddcci_probe */
-struct monitorlist {
+struct MonitorList {
 	char* filename; /* I2C device filename */
 	
 	unsigned char supported; /* 0 - DDC/CI not supported, 1 - DDC/CI supported */
 	char* name;
 	unsigned char digital; /* 0 - digital, 1 - analog */
 	
-	struct monitorlist* next;
+	struct MonitorList* next;
 };
 
-struct monitorlist* ddcci_probe();
-void ddcci_free_list(struct monitorlist* list);
+struct MonitorList* ddcci_probe();
+void ddcci_free_list(struct MonitorList* list);
 
-int ddcci_open(struct monitor* mon, const char* filename, int probing);
-int ddcci_save(struct monitor* mon);
-int ddcci_close(struct monitor* mon);
+int ddcci_open(struct Monitor* mon, const char* filename, int probing);
+int ddcci_save(struct Monitor* mon);
+int ddcci_close(struct Monitor* mon);
 
-int ddcci_writectrl(struct monitor* mon, unsigned char ctrl, unsigned short value, int delay);
+int ddcci_writectrl(struct Monitor* mon, unsigned char ctrl, unsigned short value, int delay);
 
 /* return values: < 0 - failure, 0 - contron not supported, > 0 - supported */
-int ddcci_readctrl(struct monitor* mon, unsigned char ctrl, 
+int ddcci_readctrl(struct Monitor* mon, unsigned char ctrl, 
 	unsigned short *value, unsigned short *maximum);
 
-int ddcci_parse_caps(const char* caps_str, struct caps* caps, int add);
+int ddcci_parse_caps(const char* caps_str, struct Caps* caps, int add);
 
-int ddcci_caps(struct monitor* mon);
+int ddcci_caps(struct Monitor* mon);
 
 /* verbosity level (0 - normal, 1 - encoded data, 2 - ddc/ci frames) */
 void ddcci_verbosity(int verbosity);
